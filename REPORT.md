@@ -1,15 +1,15 @@
-# Report
+# Implicit SDF representation: Report
 
 ## Abstract
 
-The main goal of this task is to compress meshes by representing them as SDFs (Signed Distance Functions).
+The main goal of this task is to compress meshes by representing them as SDFs (Signed Distance Functions). For this purpose, different approaches such as SIREN, NG-LOD and INGP are compared. Original Instant-NGP implementation is modified in order to achieve small network size and later is used to compress different 3D objects into lightweight SDF neural network.
 
 ## Introduction
 
 ### SDF (Signed Distance Function)
 
 SDF is such a function that takes some point in the 3D space as input and returns the distance from that point to the surface of the object.
-Therefore, if the given point is inside the object SDF is positive, 0 if it is on the boundary and negative if it is outside the object (See picture below).
+Therefore, if the given point is inside the object SDF is positive, 0 if it is on the boundary and negative if it is outside the object (See the picture below).
 
 ![](assets/sdf_duck.png)
 
@@ -23,21 +23,73 @@ The simple and the most naive approach is to store SDF values for the grid point
 
 Advanced approaches require constructing a special neural network that is trained on the sample points. 
 
-By using simple universal approximator with gradient descent 
-
-## Methods overview
+## Related work
 
 ### SIREN
 
-Thus, by fitting only by using gradients 
+ReLU-based multilayer perceptrons (MLPs) lack the capacity to represent fine details in the
+underlying signals, and they typically do not represent the derivatives of a target signal well. This
+is partly due to the fact that ReLU networks are piecewise linear, their second derivative is zero
+everywhere, and they are thus incapable of modeling information contained in higher-order derivatives
+of natural signals.<sup>[1]</sup>
 
+SIREN (**SI**nusoidal **RE**presentation **N**etworks) introduce periodic activation functions (`sin` is used in the original paper, but can be any other) instead of standard ReLU.
+
+SIREN is trained only on oriented point clouds (only on the gradient without an actual distance).
+Fitting SIREN is done using a loss of the form (see below<sup>[1]</sup>)
+
+![](assets/siren_loss.png)
+
+During training, each minibatch contains an equal number of points on and off the mesh, each one randomly sampled over the sample space. As seen in the picture below<sup>[1]</sup>, the proposed periodic
+activations significantly increase the details of objects.
+
+![](assets/siren_example.png)
 
 ### NG-LOD
 
+**N**eural **G**eometric **L**evel **O**f **D**etail (NG-LOD) represents implicit surfaces using an octree-based feature volume which adaptively fits shapes with multiple discrete levels of detail (LODs), and enables continuous LOD with SDF interpolation.<sup>[2]</sup>
+
+![](assets/ng_lod_arch.png)
+
+As shown in the picture above<sup>[2]</sup>, NG-LOD encodes neural SDF using a **S**parse **V**oxel **O**ctree (SVO) which holds a collection of features. The levels of the SVO define LODs and the voxel corners contain feature vectors defining local surface segments. Given query point x and LOD L, we
+find corresponding voxels, trilinearly interpolate their corners and sum to obtain a feature vector. Together with input point, this vector is fed into a small MLP to obtain a signed distance.
+
+This method allows to capture the high-frequency details to reasonable accuracy (see below<sup>[2]</sup>).
+
+![](assets/ng_lod_example.png)
+
 ### Instant-NGP *(chosen)*
 
+NGPs that are parameterized by fully connected neural networks can be costly to train and evaluate.
+Thus, to reduce this cost Instant-NGP introduces a versatile multiresolution hash encoding that permits the use of a smaller network without sacrificing quality, thus significantly reducing the number of floating point and memory access operations. A small neural network is augmented by a multiresolution hash table of trainable feature vectors whose values are optimized through stochastic gradient descent.<sup>[3]</sup>
 
-## Results
+![](assets/ingp_arch.png)
+
+The picture above is the illustration of the multiresolution hash encoding in 2D. For a given input coordinate x, we find the surrounding voxels at L resolution levels and
+assign indices to their corners by hashing their integer coordinates. For all resulting corner indices, we look up the corresponding F-dimensional feature
+vectors from the hash tables and linearly interpolate them according to the relative position of x within the respective l-th voxel. Then, we concatenate the
+result of each level, as well as auxiliary inputs, producing the encoded MLP input, which is evaluated last. To train the encoding, loss
+gradients are backpropagated through the MLP, the concatenation, the linear interpolation, and then accumulated in the looked-up feature vectors.<sup>[3]</sup>
+
+![](assets/ingp_example.png)
+
+Nevertheless, NGLOD achieves the highest visual reconstruction quality as seen in the picture above<sup>[3]</sup>. However, INGP encoding
+approaches a similar fidelity to NGLOD in terms of the **I**ntersection-**o**ver-**U**nion metric (IoU) with similar performance and memory cost.
+Furthermore, the SDF is defined everywhere within the training volume,
+as opposed to NGLOD, which is only defined within the octree (i.e. close to the surface). This permits the use of certain SDF rendering techniques
+such as approximate soft shadows from a small number of off-surface distance samples.
+
+Thus, Instant-NGP approach is chosen for the task.
+
+## Implementation details
+
+In order to make the network both lightweight and high-quality some hash encoder are fine-tuned.
+
+In the picture below<sup>[3]</sup>, the default encoder parameters are presented. In order to satisfy the requirements, the number of levels is set to 8, max entries per level (hash table size) is set to 2<sup>18</sup>, coarsest resolution is set to 8 and finest resolution is set to 32.
+
+![](assets/ingp_params.png)
+
+## Evaluation
 
 ### Quality measurement
 
@@ -45,6 +97,8 @@ Quality is measured as F1 score between the true SDF sign and predicted SDF sign
 
 * For measurement on the surface points are almost equally distributed on a surface + Gaussian noise with stdev `1e-2`
 * For measurement on the bounding volume of the object points are randomly selected from the volume 
+
+### Results
 
 ```text
 +--------------+-----------------+-------------------+------------------+--------------------------+---------------------+
@@ -107,9 +161,18 @@ Quality is measured as F1 score between the true SDF sign and predicted SDF sign
 
 As shown in the table the results are:
 * **The size of the model** is only `0.6528 MB` (< `1 MB`) which satisfies the requirements
-* **Average quality near the surface** is `0.9231` (> `0.9`) which satisfies the requirements
-* **Average quality on the bound volume** is `0.9984` (> `0.95`) which satisfies the requirements
+* **Average F1 score near the surface** is `0.9231` (> `0.9`) which satisfies the requirements
+* **Average F1 score on the bound volume** is `0.9984` (> `0.95`) which satisfies the requirements
 * **Average time per 100k batch** is `0.3074 ms` which satisfies the requirements
 * **Average time per point** is `3.0740 ns` which satisfies the requirements
 
-Overall, developed model satisfies all the requirements
+## Conclusion
+
+Overall, INGP approach can be used to compress meshes into corresponding lightweight SDF neural networks with a high quality level of details. For instance, in some cases quality `1` on bounding volume is achieved in some cases.
+However, for more complex objects, the quality near the surface is relatively low (for example `0.75`). One of the possible reasons is that encoder was too small to fit the whole object complexity.
+
+## References
+
+- [1] - Implicit Neural Representations with Periodic Activation Functions, 2020 - Vincent Sitzmann, Julien N. P. Martel, Alexander W. Bergman, David B. Lindell, Gordon Wetzstein [https://arxiv.org/abs/2006.09661](https://arxiv.org/abs/2006.09661)
+- [2] - Neural Geometric Level of Detail: Real-time Rendering with Implicit 3D Shapes, 2021 - Towaki Takikawa, Joey Litalien, Kangxue Yin, Karsten Kreis, Charles Loop, Derek Nowrouzezahrai, Alec Jacobson, Morgan McGuire, Sanja Fidler [https://arxiv.org/abs/2101.10994](https://arxiv.org/abs/2101.10994)
+- [3] - Instant Neural Graphics Primitives with a Multiresolution Hash Encoding, 2022 - Thomas Müller, Alex Evans, Christoph Schied, Alexander Keller [https://doi.org/10.1145/3528223.3530127](https://doi.org/10.1145/3528223.3530127)
