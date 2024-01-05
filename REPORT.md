@@ -6,16 +6,31 @@ The main goal of this task is to compress meshes by representing them as SDFs (S
 
 ## Introduction
 
-### What is SDF (Signed Distance Function)?
+### SDF (Signed Distance Function)
 
 SDF is such a function that takes some point in the 3D space as input and returns the distance from that point to the surface of the object.
-Therefore, if the given point is inside the object SDF is positive, 0 if it is on the surface and negative if it is outside the object (See picture below).
+Therefore, if the given point is inside the object SDF is positive, 0 if it is on the boundary and negative if it is outside the object (See picture below).
 
 ![](assets/sdf_duck.png)
+
+Using SDF we can describe objects with much less memory consumption and with infinite resolution. For example it is impossible to represent a sphere as a set of triangles, but it is very easy to represent with SDF ```r^2 - x^2 - y^2 - z^2```.
+
+### Neural network usage
+
+When the object is represented not as SDF, there is a need to construct it somehow.
+
+The simple and the most naive approach is to store SDF values for the grid points and later interpolate between them. The major outback is that we are losing both memory consumption and resolution in this case.
+
+Advanced approaches require constructing a special neural network that is trained on the sample points. 
+
+By using simple universal approximator with gradient descent 
 
 ## Methods overview
 
 ### SIREN
+
+Thus, by fitting only by using gradients 
+
 
 ### NG-LOD
 
@@ -26,7 +41,10 @@ Therefore, if the given point is inside the object SDF is positive, 0 if it is o
 
 ### Quality measurement
 
+Quality is measured as F1 score between the true SDF sign and predicted SDF sign of sampled points
 
+* For measurement on the surface points are almost equally distributed on a surface + Gaussian noise with stdev `1e-2`
+* For measurement on the bounding volume of the object points are randomly selected from the volume 
 
 ```text
 +--------------+-----------------+-------------------+------------------+--------------------------+---------------------+
