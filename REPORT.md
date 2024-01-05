@@ -1,3 +1,33 @@
+# Report
+
+## Abstract
+
+The main goal of this task is to compress meshes by representing them as SDFs (Signed Distance Functions).
+
+## Introduction
+
+### What is SDF (Signed Distance Function)?
+
+SDF is such a function that takes some point in the 3D space as input and returns the distance from that point to the surface of the object.
+Therefore, if the given point is inside the object SDF is positive, 0 if it is on the surface and negative if it is outside the object (See picture below).
+
+![](assets/sdf_duck.png)
+
+## Methods overview
+
+### SIREN
+
+### NG-LOD
+
+### Instant-NGP *(chosen)*
+
+
+## Results
+
+### Quality measurement
+
+
+
 ```text
 +--------------+-----------------+-------------------+------------------+--------------------------+---------------------+
 | Model number | Model size (MB) | Quality (surface) | Quality (volume) | Time per 100k batch (ms) | Time per point (ns) |
@@ -55,5 +85,13 @@
 +--------------+-----------------+-------------------+------------------+--------------------------+---------------------+
 | Average      | 0.6528          | 0.9231            | 0.9984           | 0.3074                   | 3.0740
 +--------------+-----------------+-------------------+------------------+--------------------------+---------------------+
-
 ```
+
+As shown in the table the results are:
+* **The size of the model** is only `0.6528 MB` (< `1 MB`) which satisfies the requirements
+* **Average quality near the surface** is `0.9231` (> `0.9`) which satisfies the requirements
+* **Average quality on the bound volume** is `0.9984` (> `0.95`) which satisfies the requirements
+* **Average time per 100k batch** is `0.3074 ms` which satisfies the requirements
+* **Average time per point** is `3.0740 ns` which satisfies the requirements
+
+Overall, developed model satisfies all the requirements
