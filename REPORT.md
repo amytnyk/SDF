@@ -176,3 +176,4 @@ However, for more complex objects, the quality near the surface is relatively lo
 - [1] - Implicit Neural Representations with Periodic Activation Functions, 2020 - Vincent Sitzmann, Julien N. P. Martel, Alexander W. Bergman, David B. Lindell, Gordon Wetzstein [https://arxiv.org/abs/2006.09661](https://arxiv.org/abs/2006.09661)
 - [2] - Neural Geometric Level of Detail: Real-time Rendering with Implicit 3D Shapes, 2021 - Towaki Takikawa, Joey Litalien, Kangxue Yin, Karsten Kreis, Charles Loop, Derek Nowrouzezahrai, Alec Jacobson, Morgan McGuire, Sanja Fidler [https://arxiv.org/abs/2101.10994](https://arxiv.org/abs/2101.10994)
 - [3] - Instant Neural Graphics Primitives with a Multiresolution Hash Encoding, 2022 - Thomas Müller, Alex Evans, Christoph Schied, Alexander Keller [https://doi.org/10.1145/3528223.3530127](https://doi.org/10.1145/3528223.3530127)
+- [4] - PyTorch INGP implementation - https://github.com/ashawkey/torch-ngp
